@@ -736,14 +736,24 @@
     <!-- MÓDULO 4: ROMPECABEZAS -->
     <section id="tab-puzzle" class="module-section">
       <div class="game-box" style="text-align:center;">
-        <h2 style="color:var(--pink-main);">🧩 Rompecabezas de las Láminas</h2>
+        <h2 style="color:var(--pink-main);">🧩 Rompecabezas de las Láminas (5 Niveles)</h2>
         <p style="color:#475569; margin-bottom:12px;">Tocá dos piezas para intercambiarlas hasta armar la lámina completa.</p>
-        <div style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
-          <select id="puzzle-lamina-select" onchange="initPuzzle()" style="padding:8px 12px; border-radius:10px; font-weight:700;"></select>
-          <button class="font-btn active" style="background:var(--pink-main); color:#fff;" onclick="setPuzzleSize(2)">Nivel Inicial (2x2)</button>
-          <button class="font-btn active" style="background:var(--teal-ibera); color:#fff;" onclick="setPuzzleSize(3)">Nivel Primaria (3x3)</button>
+        <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+          <select id="puzzle-lamina-select" onchange="initPuzzle()" style="padding:8px 12px; border-radius:10px; font-weight:700; border:2px solid #f48fb1;"></select>
+          <button class="font-btn puzzle-lvl-btn active" id="pzl-btn-2" style="background:var(--pink-main); color:#fff;" onclick="setPuzzleSize(2)">🌱 2x2 (4 pzs)</button>
+          <button class="font-btn puzzle-lvl-btn" id="pzl-btn-3" style="background:var(--teal-ibera); color:#fff;" onclick="setPuzzleSize(3)">🌿 3x3 (9 pzs)</button>
+          <button class="font-btn puzzle-lvl-btn" id="pzl-btn-4" style="background:#1565c0; color:#fff;" onclick="setPuzzleSize(4)">⭐ 4x4 (16 pzs)</button>
+          <button class="font-btn puzzle-lvl-btn" id="pzl-btn-5" style="background:#6a1b9a; color:#fff;" onclick="setPuzzleSize(5)">🔥 5x5 (25 pzs)</button>
+          <button class="font-btn puzzle-lvl-btn" id="pzl-btn-6" style="background:#e65100; color:#fff;" onclick="setPuzzleSize(6)">👑 6x6 (36 pzs)</button>
+          <button class="font-btn" style="background:#37474f; color:#fff;" onclick="togglePuzzleGuide()">👁️ Ver Guía</button>
         </div>
-        <div id="puzzle-status" style="font-weight:800; color:#2e7d32; min-height:24px;"></div>
+        <div style="display:flex; justify-content:center; gap:18px; align-items:center; margin-bottom:6px;">
+          <span id="puzzle-moves" style="font-weight:700; color:#475569;">Movimientos: 0</span>
+          <span id="puzzle-status" style="font-weight:800; color:#2e7d32;"></span>
+        </div>
+        <div id="puzzle-guide-box" style="display:none; max-width:240px; margin:8px auto;">
+          <img id="puzzle-guide-img" src="" alt="Guía" style="width:100%; border-radius:10px; border:3px solid var(--pink-main);" />
+        </div>
         <div class="puzzle-board" id="puzzle-board"></div>
       </div>
     </section>
@@ -1191,19 +1201,26 @@
       }
     }
 
-    // MÓDULO 4: ROMPECABEZAS
-    let puzzleSize = 2;
+    // MÓDULO 4: ROMPECABEZAS (5 NIVELES: 2x2 a 6x6)
+    let puzzleSize = 3;
     let puzzleOrder = [];
     let selectedTile = null;
+    let puzzleMoves = 0;
 
     function populatePuzzleSelect() {
       const sel = document.getElementById('puzzle-lamina-select');
-      sel.innerHTML = COLOR_PAGES.map(p => `<option value="${p.img}">Lámina ${p.page}: ${p.es} (${p.gn})</option>`).join('');
+      sel.innerHTML = PAGES.map(p => `<option value="${p.page}">Lámina ${p.page}: ${p.es} (${p.gn})</option>`).join('');
+      sel.value = "2";
     }
 
     function setPuzzleSize(n) {
       puzzleSize = n;
       initPuzzle();
+    }
+
+    function togglePuzzleGuide() {
+      const box = document.getElementById('puzzle-guide-box');
+      box.style.display = (box.style.display === 'none') ? 'block' : 'none';
     }
 
     function initPuzzle() {
@@ -1213,14 +1230,22 @@
         puzzleOrder.sort(() => Math.random() - 0.5);
       } while (puzzleOrder.every((v, i) => v === i));
       selectedTile = null;
-      document.getElementById('puzzle-status').textContent = '';
+      puzzleMoves = 0;
+      document.getElementById('puzzle-moves').textContent = 'Movimientos: 0';
+      document.getElementById('puzzle-status').textContent = `Nivel actual: ${puzzleSize}x${puzzleSize} (${total} piezas)`;
+      const selPage = parseInt(document.getElementById('puzzle-lamina-select').value || '2', 10);
+      const pObj = PAGES.find(x => x.page === selPage) || PAGES[1];
+      document.getElementById('puzzle-guide-img').src = pObj.img;
       renderPuzzleBoard();
     }
 
     function renderPuzzleBoard() {
       const board = document.getElementById('puzzle-board');
-      const imgUrl = document.getElementById('puzzle-lamina-select').value;
+      const selPage = parseInt(document.getElementById('puzzle-lamina-select').value || '2', 10);
+      const pObj = PAGES.find(x => x.page === selPage) || PAGES[1];
+      const imgUrl = pObj.img;
       board.style.gridTemplateColumns = `repeat(${puzzleSize}, 1fr)`;
+      board.style.gap = puzzleSize >= 5 ? '2px' : '4px';
 
       board.innerHTML = puzzleOrder.map((pieceIdx, posIdx) => {
         const row = Math.floor(pieceIdx / puzzleSize);
@@ -1238,14 +1263,20 @@
         selectedTile = posIdx;
         renderPuzzleBoard();
       } else {
-        const temp = puzzleOrder[selectedTile];
-        puzzleOrder[selectedTile] = puzzleOrder[posIdx];
-        puzzleOrder[posIdx] = temp;
+        if (selectedTile !== posIdx) {
+          const temp = puzzleOrder[selectedTile];
+          puzzleOrder[selectedTile] = puzzleOrder[posIdx];
+          puzzleOrder[posIdx] = temp;
+          puzzleMoves++;
+          document.getElementById('puzzle-moves').textContent = `Movimientos: ${puzzleMoves}`;
+        }
         selectedTile = null;
         renderPuzzleBoard();
         if (puzzleOrder.every((v, i) => v === i)) {
-          document.getElementById('puzzle-status').textContent = '🎉 ¡Iporãitereí! ¡Armaste la lámina completa!';
-          speakSmartTTS('¡Iporá itereí! ¡Muy bien!');
+          const selPage = parseInt(document.getElementById('puzzle-lamina-select').value || '2', 10);
+          const pObj = PAGES.find(x => x.page === selPage) || PAGES[1];
+          document.getElementById('puzzle-status').textContent = `🎉 ¡Iporãitereí! ¡Completaste ${pObj.gn} en ${puzzleMoves} movimientos!`;
+          playAudioForPage(pObj);
         }
       }
     }
